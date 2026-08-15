@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { WS_TOPICS } from "@/config/constants";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { displaySeverity, formatTimestamp, mapBackendSeverity } from "@/lib/ws-utils";
+import { ambulanceService } from "@/services/ambulance.service";
+import type { AmbulanceRecord } from "@/services/types";
 
 export interface CommandIncident {
   id: string;
@@ -11,6 +13,8 @@ export interface CommandIncident {
   status: string;
   assignedUnit?: string;
   eta?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface CommandAmbulance {
@@ -19,6 +23,8 @@ export interface CommandAmbulance {
   driver: string;
   status: string;
   speed: number;
+  lat?: number;
+  lng?: number;
 }
 
 export interface CommandLog {
@@ -36,14 +42,74 @@ export function useCommandDashboard() {
     setLogs((prev) => [{ timestamp: formatTimestamp(new Date()), message }, ...prev.slice(0, 49)]);
   };
 
+  // Seed real ambulance positions once via the existing REST endpoint (not
+  // polling — live updates afterwards come exclusively from the WebSocket
+  // feed below, same as everything else on this dashboard).
+  useEffect(() => {
+    let cancelled = false;
+    ambulanceService
+      .list()
+      .then((records: AmbulanceRecord[]) => {
+        if (cancelled) return;
+        setAmbulances((prev) => {
+          const known = new Set(prev.map((a) => a.id));
+          const seeded = records
+            .filter((r) => !known.has(r.id))
+            .map((r) => ({
+              id: r.id,
+              callsign: r.id.substring(0, 8).toUpperCase(),
+              driver: "Crew on standby",
+              status: r.status.toLowerCase(),
+              speed: 0,
+              lat: r.lat,
+              lng: r.lng,
+            }));
+          return [...prev, ...seeded];
+        });
+      })
+      .catch(() => {
+        // Non-fatal — dashboard still works from WS-only data if the REST call fails.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     return subscribe(WS_TOPICS.DASHBOARD, (data) => {
       const type = String(data.type ?? "");
+
+      if (type === "AMBULANCE_LOCATION") {
+        const aid = String(data.id ?? data.ambulanceId ?? "");
+        const loc = data.location as { lat: number; lng: number } | undefined;
+        if (aid && loc) {
+          setAmbulances((prev) => {
+            if (prev.some((a) => a.id === aid)) {
+              return prev.map((a) => (a.id === aid ? { ...a, lat: loc.lat, lng: loc.lng } : a));
+            }
+            return [
+              {
+                id: aid,
+                callsign: aid.substring(0, 8).toUpperCase(),
+                driver: "Crew on standby",
+                status: "en-route",
+                speed: 40,
+                lat: loc.lat,
+                lng: loc.lng,
+              },
+              ...prev,
+            ];
+          });
+        }
+        return;
+      }
+
       const eid = String(data.emergencyId ?? "");
       if (!eid) return;
 
       if (type === "EMERGENCY_REPORTED") {
         const injuryType = String(data.injuryType ?? "Emergency");
+        const loc = data.location as { lat: number; lng: number } | undefined;
         setIncidents((prev) => {
           if (prev.some((i) => i.id === eid)) return prev;
           return [
@@ -53,6 +119,8 @@ export function useCommandDashboard() {
               severity: mapBackendSeverity(String(data.severity ?? "HIGH")),
               location: "Active zone",
               status: "active",
+              lat: loc?.lat,
+              lng: loc?.lng,
             },
             ...prev,
           ];

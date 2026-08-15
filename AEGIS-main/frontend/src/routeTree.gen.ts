@@ -13,6 +13,7 @@ import { Route as VolunteerRouteImport } from './routes/volunteer'
 import { Route as TrackingRouteImport } from './routes/tracking'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HospitalRouteImport } from './routes/hospital'
+import { Route as CommandOldRouteImport } from './routes/command-old'
 import { Route as CommandRouteImport } from './routes/command'
 import { Route as CitizenRouteImport } from './routes/citizen'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
@@ -37,6 +38,11 @@ const LoginRoute = LoginRouteImport.update({
 const HospitalRoute = HospitalRouteImport.update({
   id: '/hospital',
   path: '/hospital',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommandOldRoute = CommandOldRouteImport.update({
+  id: '/command-old',
+  path: '/command-old',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommandRoute = CommandRouteImport.update({
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/analytics': typeof AnalyticsRoute
   '/citizen': typeof CitizenRoute
   '/command': typeof CommandRoute
+  '/command-old': typeof CommandOldRoute
   '/hospital': typeof HospitalRoute
   '/login': typeof LoginRoute
   '/tracking': typeof TrackingRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/analytics': typeof AnalyticsRoute
   '/citizen': typeof CitizenRoute
   '/command': typeof CommandRoute
+  '/command-old': typeof CommandOldRoute
   '/hospital': typeof HospitalRoute
   '/login': typeof LoginRoute
   '/tracking': typeof TrackingRoute
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/analytics': typeof AnalyticsRoute
   '/citizen': typeof CitizenRoute
   '/command': typeof CommandRoute
+  '/command-old': typeof CommandOldRoute
   '/hospital': typeof HospitalRoute
   '/login': typeof LoginRoute
   '/tracking': typeof TrackingRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/citizen'
     | '/command'
+    | '/command-old'
     | '/hospital'
     | '/login'
     | '/tracking'
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/citizen'
     | '/command'
+    | '/command-old'
     | '/hospital'
     | '/login'
     | '/tracking'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/citizen'
     | '/command'
+    | '/command-old'
     | '/hospital'
     | '/login'
     | '/tracking'
@@ -141,6 +153,7 @@ export interface RootRouteChildren {
   AnalyticsRoute: typeof AnalyticsRoute
   CitizenRoute: typeof CitizenRoute
   CommandRoute: typeof CommandRoute
+  CommandOldRoute: typeof CommandOldRoute
   HospitalRoute: typeof HospitalRoute
   LoginRoute: typeof LoginRoute
   TrackingRoute: typeof TrackingRoute
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/hospital'
       fullPath: '/hospital'
       preLoaderRoute: typeof HospitalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/command-old': {
+      id: '/command-old'
+      path: '/command-old'
+      fullPath: '/command-old'
+      preLoaderRoute: typeof CommandOldRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/command': {
@@ -221,6 +241,7 @@ const rootRouteChildren: RootRouteChildren = {
   AnalyticsRoute: AnalyticsRoute,
   CitizenRoute: CitizenRoute,
   CommandRoute: CommandRoute,
+  CommandOldRoute: CommandOldRoute,
   HospitalRoute: HospitalRoute,
   LoginRoute: LoginRoute,
   TrackingRoute: TrackingRoute,

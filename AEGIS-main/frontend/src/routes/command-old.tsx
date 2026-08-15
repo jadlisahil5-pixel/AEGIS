@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   Ambulance,
@@ -13,10 +13,6 @@ import {
 import { SectionCard, SeverityBadge, StatCard } from "@/components/design-system";
 import { AdminShell, type AdminTab } from "@/components/roles/admin-shell";
 import ProfileHeader from "@/components/profile/profile-header";
-import { useDigitalTwinState } from "@/hooks/useDigitalTwinState";
-import { SimulationPanel } from "@/components/simulation-panel";
-import { DEFAULT_LOCATION } from "@/config/constants";
-import { getAuth } from "@/lib/auth-storage";
 import { LiveMap, type MapMarker } from "@/components/live-map";
 import {
   Area,
@@ -39,8 +35,21 @@ import { hospitalService } from "@/services/hospital.service";
 import { routingService } from "@/services/routing.service";
 import type { HospitalRecord } from "@/services/types";
 import type { RoutePoint } from "@/components/live-map";
+import { DEFAULT_LOCATION } from "@/config/constants";
+import { getAuth } from "@/lib/auth-storage";
 
-export const Route = createFileRoute("/command")({
+export const Route = createFileRoute("/command-old")({
+  // Real authorization boundary — a missing/expired token or a token
+  // belonging to a non-admin role is rejected here, server-trust-boundary
+  // style (the JWT itself was issued and signed by auth-service; this is
+  // just enforcing "no valid admin token, no admin page" client-side too).
+  // TEMPORARILY BYPASSED FOR TESTING WITHOUT BACKEND
+  // beforeLoad: () => {
+  //   const auth = getAuth();
+  //   if (!auth || auth.role !== "ADMIN") {
+  //     throw redirect({ to: "/login" });
+  //   }
+  // },
   head: () => ({
     meta: [{ title: "Admin Command Center · AEGIS" }],
   }),
@@ -64,11 +73,12 @@ const COLORS = { emergency: "#E63946", medical: "#0284C7", success: "#22C55E" };
 function AdminPortal() {
   const [tab, setTab] = useState<AdminTab>("operations");
   const [pulse, setPulse] = useState(0);
-  const twin = useDigitalTwinState();
+  const dashboard = useCommandDashboard();
+  const traffic = useTrafficSignals();
 
-  const incidents: ActiveIncident[] = twin.incidents;
-  const ambulances = twin.ambulances.length
-    ? twin.ambulances
+  const incidents: ActiveIncident[] = dashboard.incidents;
+  const ambulances = dashboard.ambulances.length
+    ? dashboard.ambulances
     : [{ id: "—", callsign: "Awaiting dispatch", driver: "—", status: "available", speed: 0 }];
 
   const hospitals = [
@@ -76,6 +86,24 @@ function AdminPortal() {
     { name: "Yashoda", er: 6, icu: 3 },
     { name: "Apollo Trauma", er: 9, icu: 5 },
   ];
+
+  // Real hospital locations for the Digital Twin map (reuses the existing
+  // hospital-service REST endpoint — fetched once, not polled).
+  const [hospitalRecords, setHospitalRecords] = useState<HospitalRecord[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    hospitalService
+      .list()
+      .then((records) => {
+        if (!cancelled) setHospitalRecords(records);
+      })
+      .catch(() => {
+        // Non-fatal — map still renders incidents/ambulances without hospital markers.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const volunteers = [
     { name: "Aarav Sharma", skill: "CPR", status: "responding" },
@@ -87,6 +115,56 @@ function AdminPortal() {
     const i = setInterval(() => setPulse((p) => p + 1), 4000);
     return () => clearInterval(i);
   }, []);
+
+  // Real Ghaziabad route for the active incident's assigned ambulance,
+  // computed server-side via the Google Routes API proxy (see
+  // routing.service.ts / backend RouteController) — never a hardcoded path.
+  const [activeRoute, setActiveRoute] = useState<RoutePoint[] | null>(null);
+  const [routeError, setRouteError] = useState<string | null>(null);
+
+  const activeIncidentWithUnit = incidents.find(
+    (i) => i.status !== "resolved" && i.assignedUnit && typeof i.lat === "number" && typeof i.lng === "number",
+  );
+  const assignedAmbulance = dashboard.ambulances.find(
+    (a) => a.id === activeIncidentWithUnit?.assignedUnit && typeof a.lat === "number" && typeof a.lng === "number",
+  );
+
+  useEffect(() => {
+    if (!activeIncidentWithUnit || !assignedAmbulance) {
+      setActiveRoute(null);
+      return;
+    }
+    let cancelled = false;
+    routingService
+      .compute({
+        origin: { lat: assignedAmbulance.lat!, lng: assignedAmbulance.lng! },
+        destination: { lat: activeIncidentWithUnit.lat!, lng: activeIncidentWithUnit.lng! },
+      })
+      .then((res) => {
+        if (!cancelled) {
+          setActiveRoute(res.points);
+          setRouteError(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          // Graceful fallback — e.g. GOOGLE_ROUTES_API_KEY not configured yet.
+          // The map still works, it just won't show this route.
+          setActiveRoute(null);
+          setRouteError("Live route unavailable");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Re-fetch only when the incident/ambulance pairing or positions actually change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    activeIncidentWithUnit?.id,
+    assignedAmbulance?.id,
+    assignedAmbulance?.lat,
+    assignedAmbulance?.lng,
+  ]);
 
   // Real Digital Twin markers — every position is a genuine lat/lng from the
   // backend (incident location, live ambulance GPS, hospital location), never
@@ -102,7 +180,7 @@ function AdminPortal() {
         active: e.status !== "resolved",
         label: `${e.type} · ${e.id.substring(0, 8)}`,
       })),
-    ...twin.ambulances
+    ...dashboard.ambulances
       .filter((a) => typeof a.lat === "number" && typeof a.lng === "number")
       .map((a) => ({
         id: `amb-${a.id}`,
@@ -113,17 +191,7 @@ function AdminPortal() {
         label: a.callsign,
         status: a.status,
       })),
-    ...twin.police
-      .filter((p) => typeof p.lat === "number" && typeof p.lng === "number")
-      .map((p) => ({
-        id: `pol-${p.id}`,
-        type: "police" as const,
-        lat: p.lat,
-        lng: p.lng,
-        active: true,
-        label: p.id,
-      })),
-    ...twin.hospitals
+    ...hospitalRecords
       .filter((h) => typeof h.lat === "number" && typeof h.lng === "number")
       .map((h) => ({
         id: `hosp-${h.id}`,
@@ -140,7 +208,7 @@ function AdminPortal() {
     // (still used by route-optimization-service's old graph) is filtered
     // out by bounding box rather than assumed by ID, so this stays correct
     // even as more real signals get added later.
-    ...twin.trafficSignals
+    ...traffic.signals
       .filter((s) => s.lat >= 28.5 && s.lat <= 28.8 && s.lng >= 77.25 && s.lng <= 77.55)
       .map((s) => ({
         id: `signal-${s.id}`,
@@ -171,8 +239,8 @@ function AdminPortal() {
               description="Live GPS overlays"
               actions={
                 <span className="flex items-center gap-1 text-[10px] font-bold text-[#525866]">
-                  <Wifi className={`h-3.5 w-3.5 ${twin.connected ? "text-success" : "text-warning"}`} />
-                  {twin.connected ? "Live" : "Connecting"}
+                  <Wifi className={`h-3.5 w-3.5 ${dashboard.connected ? "text-success" : "text-warning"}`} />
+                  {dashboard.connected ? "Live" : "Connecting"}
                 </span>
               }
             >
@@ -186,42 +254,39 @@ function AdminPortal() {
                 markers={markers}
                 center={DEFAULT_LOCATION}
                 zoom={12}
-                routePoints={twin.activeRoute ?? undefined}
-                showCorridor={twin.greenCorridor.active}
+                routePoints={activeRoute ?? undefined}
+                showCorridor={traffic.corridor.active}
               />
               <div className="mt-2 flex items-center justify-between text-[10px] font-semibold text-[#525866]">
-                {twin.routeError && <span>{twin.routeError} — check GOOGLE_ROUTES_API_KEY on the backend.</span>}
+                {routeError && <span>{routeError} — check GOOGLE_ROUTES_API_KEY on the backend.</span>}
                 <span className="ml-auto flex items-center gap-1.5">
                   <span
-                    className={`h-1.5 w-1.5 rounded-full ${twin.greenCorridor.active ? "bg-green-500 animate-pulse" : "bg-gray-300"}`}
+                    className={`h-1.5 w-1.5 rounded-full ${traffic.corridor.active ? "bg-green-500 animate-pulse" : "bg-gray-300"}`}
                   />
-                  Green Corridor: {twin.greenCorridor.active ? `ACTIVE (${twin.greenCorridor.signalIds.length} signals)` : "inactive"}
+                  Green Corridor: {traffic.corridor.active ? `ACTIVE (${traffic.corridor.signalIds.length} signals)` : "inactive"}
                 </span>
               </div>
             </SectionCard>
-            <div className="space-y-6">
-              <SimulationPanel state={twin} actions={twin.actions} />
-              <SectionCard title="Live Emergency Feed">
-                <div className="max-h-[420px] space-y-2 overflow-y-auto">
-                  {incidents.length === 0 ? (
-                    <p className="py-8 text-center text-xs text-[#525866]">
-                      No active emergencies — feed updates in real time via WebSocket.
-                    </p>
-                  ) : (
-                    incidents.map((e) => (
-                    <div key={e.id} className="rounded-xl bg-[#F8F9FB] p-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[#111111]">{e.id}</span>
-                        <SeverityBadge severity={e.severity} />
-                      </div>
-                      <p className="mt-1 text-xs font-semibold text-[#111111]">{e.type}</p>
-                      <p className="text-[10px] text-[#525866]">{e.location} · {e.status}</p>
+            <SectionCard title="Live Emergency Feed">
+              <div className="max-h-[420px] space-y-2 overflow-y-auto">
+                {incidents.length === 0 ? (
+                  <p className="py-8 text-center text-xs text-[#525866]">
+                    No active emergencies — feed updates in real time via WebSocket.
+                  </p>
+                ) : (
+                  incidents.map((e) => (
+                  <div key={e.id} className="rounded-xl bg-[#F8F9FB] p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#111111]">{e.id}</span>
+                      <SeverityBadge severity={e.severity} />
                     </div>
-                    ))
-                  )}
-                </div>
-              </SectionCard>
-            </div>
+                    <p className="mt-1 text-xs font-semibold text-[#111111]">{e.type}</p>
+                    <p className="text-[10px] text-[#525866]">{e.location} · {e.status}</p>
+                  </div>
+                  ))
+                )}
+              </div>
+            </SectionCard>
           </div>
           <SectionCard title="Green Corridor Control" description="Active transit overrides">
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">

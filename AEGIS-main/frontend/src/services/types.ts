@@ -3,6 +3,20 @@ export interface GeoLocation {
   lng: number;
 }
 
+export interface RouteComputeRequest {
+  origin: GeoLocation;
+  destination: GeoLocation;
+}
+
+export interface RouteComputeResponse {
+  origin: GeoLocation;
+  destination: GeoLocation;
+  points: GeoLocation[];
+  distanceMeters: number;
+  durationSeconds: number;
+  etaMinutes: number;
+}
+
 export interface CreateEmergencyPayload {
   citizenId: string;
   location: GeoLocation;
@@ -32,18 +46,37 @@ export interface EmergencySnapshot {
 
 export interface AmbulanceRecord {
   id: string;
+  vehicleNumber?: string;
   status: string;
-  location?: GeoLocation;
+  /** Backend returns flat lat/lng, not a nested location object. */
+  lat?: number;
+  lng?: number;
+  driverName?: string;
+  driverPhone?: string;
+  equipmentLevel?: string;
   emergencyId?: string;
 }
 
 export interface HospitalRecord {
   id: string;
   name: string;
+  lat?: number;
+  lng?: number;
   availableIcuBeds?: number;
   totalIcuBeds?: number;
-  availableErBeds?: number;
-  totalErBeds?: number;
+  specializations?: string;
+  phone?: string;
+  currentLoadPct?: number;
+}
+
+export interface TrafficSignalRecord {
+  id: string;
+  lat: number;
+  lng: number;
+  roadSegment?: string;
+  currentState: string;
+  controlledByCorridorId?: string;
+  priorityExpiresAt?: string;
 }
 
 export interface DashboardWsEvent {

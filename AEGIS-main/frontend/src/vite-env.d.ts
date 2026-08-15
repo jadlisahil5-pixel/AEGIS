@@ -11,6 +11,7 @@ interface ImportMetaEnv {
   readonly VITE_TRAFFIC_WS_URL: string;
   readonly VITE_DEMO_HOSPITAL_ID: string;
   readonly VITE_MAPBOX_TOKEN: string;
+  readonly VITE_GOOGLE_MAPS_API_KEY: string;
 }
 
 interface ImportMeta {

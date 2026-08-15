@@ -1,5 +1,6 @@
 import { config } from "@/config/env";
 import { apiRequest } from "./api-client";
+import type { TrafficSignalRecord } from "./types";
 
 const BASE = `${config.trafficApiUrl}/api/v1/traffic`;
 
@@ -12,6 +13,6 @@ export const trafficService = {
   },
 
   listSignals() {
-    return apiRequest<Record<string, unknown>[]>(`${BASE}/signals`);
+    return apiRequest<TrafficSignalRecord[]>(`${BASE}/signals`);
   },
 };

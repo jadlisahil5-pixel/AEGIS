@@ -15,4 +15,5 @@ export const config = {
   trafficWsUrl: env("VITE_TRAFFIC_WS_URL", "http://localhost:8084/ws"),
   demoHospitalId: env("VITE_DEMO_HOSPITAL_ID", "c7d92ea3-66e1-52cf-a149-8db02ea83615"),
   mapboxToken: env("VITE_MAPBOX_TOKEN", ""),
+  googleMapsApiKey: env("VITE_GOOGLE_MAPS_API_KEY", ""),
 } as const;
