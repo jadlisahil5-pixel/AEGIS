@@ -888,6 +888,9 @@ function AdminPortal() {
 
   // ── Simulator state (preserved from original) ──
   const [simMode, setSimMode] = useState(false);
+  const [simPausedState, setSimPausedState] = useState(false);
+  const simPausedRef = useRef(false);
+  
   const [simStep, setSimStep] = useState<
     "idle" | "radar-scan" | "match-unit" | "green-corridor" | "success"
   >("idle");
@@ -1276,6 +1279,7 @@ function AdminPortal() {
 
     let score = 0;
     const severityTimer = setInterval(() => {
+      if (simPausedRef.current) return;
       score += 3;
       if (score >= 94) {
         score = 94;
@@ -1285,6 +1289,7 @@ function AdminPortal() {
           const ambulancesList = ["AMB-1102", "AMB-1094", "AMB-1057", "AMB-1083"];
           let i = 0;
           const matchTimer = setInterval(() => {
+            if (simPausedRef.current) return;
             setAmbulanceFlicker(ambulancesList[i % ambulancesList.length]);
             i++;
             if (i >= 8) {
@@ -1294,12 +1299,14 @@ function AdminPortal() {
                 setSimStep("green-corridor");
                 let sig = 1;
                 const signalTimer = setInterval(() => {
+                  if (simPausedRef.current) return;
                   setActiveSignals((prev) => [...prev, sig]);
                   sig++;
                   if (sig > 6) clearInterval(signalTimer);
                 }, 600);
                 let ticks = 10;
                 const progressTimer = setInterval(() => {
+                  if (simPausedRef.current) return;
                   ticks -= 1;
                   setCountdown(ticks);
                   setRouteProgress((p) => Math.min(1, p + 0.125));
@@ -1430,14 +1437,38 @@ function AdminPortal() {
                 {activeEmergenciesCount} Active Incidents
               </div>
               {/* Simulator toggle */}
+              {simMode && (
+                <button
+                  onClick={() => {
+                    const newPaused = !simPausedState;
+                    setSimPausedState(newPaused);
+                    simPausedRef.current = newPaused;
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                    simPausedState
+                      ? "bg-amber-500/10 border-amber-500/40 text-amber-600 hover:bg-amber-500/20"
+                      : "bg-[#E63946]/10 border-[#E63946]/40 text-[#E63946] hover:bg-[#E63946]/20"
+                  }`}
+                >
+                  {simPausedState ? (
+                    <>▶ Resume Sim</>
+                  ) : (
+                    <>⏸ Pause Sim</>
+                  )}
+                </button>
+              )}
               <button
                 onClick={() => {
                   setSimMode(!simMode);
-                  if (!simMode) triggerSimulation();
+                  if (!simMode) {
+                    setSimPausedState(false);
+                    simPausedRef.current = false;
+                    triggerSimulation();
+                  }
                 }}
                 className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all border ${
                   simMode
-                    ? "bg-[#E63946]/10 border-[#E63946]/40 text-[#E63946]"
+                    ? "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200"
                     : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200"
                 }`}
               >
