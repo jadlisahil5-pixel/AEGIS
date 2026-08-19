@@ -200,6 +200,16 @@ services:
         condition: service_healthy
     networks: [seg]
 
+  aegis-ai:
+    build:
+      context: .
+      dockerfile: aegis-ai/Dockerfile
+    container_name: aegis-ai
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    networks: [seg]
+
 volumes:
   seg-postgres-data:
 
