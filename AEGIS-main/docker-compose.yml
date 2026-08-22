@@ -78,6 +78,8 @@ services:
       TRAFFIC_SERVICE_URL: http://traffic-service:8084
       HOSPITAL_RECOMMENDATION_URL: http://hospital-recommendation:8003
       HOSPITAL_SERVICE_URL: http://hospital-service:8083
+      # Server-side only — never a VITE_* var, so it can never be bundled into the frontend.
+      GOOGLE_ROUTES_API_KEY: ${GOOGLE_ROUTES_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -175,6 +177,7 @@ services:
     container_name: seg-frontend
     environment:
       VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN:-}
+      VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
       VITE_EMERGENCY_API_URL: ${VITE_EMERGENCY_API_URL:-http://localhost:8081}
       VITE_AMBULANCE_API_URL: ${VITE_AMBULANCE_API_URL:-http://localhost:8082}
       VITE_HOSPITAL_API_URL: ${VITE_HOSPITAL_API_URL:-http://localhost:8083}
@@ -195,6 +198,16 @@ services:
         condition: service_healthy
       traffic-service:
         condition: service_healthy
+    networks: [seg]
+
+  aegis-ai:
+    build:
+      context: .
+      dockerfile: aegis-ai/Dockerfile
+    container_name: aegis-ai
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
     networks: [seg]
 
 volumes:

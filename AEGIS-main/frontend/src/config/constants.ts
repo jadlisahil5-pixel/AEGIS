@@ -35,3 +35,17 @@ export const CONFIG = {
 
 /** Default coordinates (Ghaziabad/NCR) when geolocation is unavailable. */
 export const DEFAULT_LOCATION = { lat: 28.6692, lng: 77.4538 } as const;
+
+/**
+ * Real Ghaziabad/NCR bounding box used by the Digital Twin map.
+ * Roughly covers central Ghaziabad (Raj Nagar Extension to Vasundhara / Indirapuram belt).
+ * Used only to place legacy percentage-based (x/y) demo markers at plausible real
+ * coordinates when a component hasn't been wired to real lat/lng yet — never used
+ * to fabricate a fake road network.
+ */
+export const GHAZIABAD_BOUNDS = {
+  latMin: 28.6,
+  latMax: 28.75,
+  lngMin: 77.35,
+  lngMax: 77.55,
+} as const;

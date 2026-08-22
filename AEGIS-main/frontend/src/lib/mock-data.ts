@@ -29,6 +29,14 @@ export interface Ambulance {
   zone: string;
 }
 
+export interface PoliceUnit {
+  id: string;
+  unitType: string;
+  lat: number;
+  lng: number;
+  status: "available" | "dispatched" | "patrolling";
+}
+
 export interface Hospital {
   id: string;
   name: string;
@@ -54,8 +62,30 @@ export interface Volunteer {
 
 const TYPES: EmergencyType[] = ["Accident", "Cardiac", "Trauma", "Stroke", "Fire", "Maternal"];
 const SEVERITIES: Severity[] = ["critical", "high", "medium", "low"];
-const ZONES = ["Sector 9", "Raj Nagar", "Indirapuram", "Vasundhara", "Vaishali", "Kavi Nagar", "Crossings", "Govindpuram"];
-const FIRST = ["Aarav", "Vivaan", "Ananya", "Diya", "Arjun", "Ishaan", "Rohan", "Kavya", "Riya", "Aditya", "Meera", "Karan"];
+const ZONES = [
+  "Sector 9",
+  "Raj Nagar",
+  "Indirapuram",
+  "Vasundhara",
+  "Vaishali",
+  "Kavi Nagar",
+  "Crossings",
+  "Govindpuram",
+];
+const FIRST = [
+  "Aarav",
+  "Vivaan",
+  "Ananya",
+  "Diya",
+  "Arjun",
+  "Ishaan",
+  "Rohan",
+  "Kavya",
+  "Riya",
+  "Aditya",
+  "Meera",
+  "Karan",
+];
 const LAST = ["Sharma", "Verma", "Gupta", "Singh", "Khan", "Patel", "Nair", "Reddy", "Iyer", "Das"];
 
 const seedRand = (seed: number) => {
@@ -66,7 +96,7 @@ const seedRand = (seed: number) => {
   };
 };
 
-const pick = <T,>(arr: T[], r: () => number) => arr[Math.floor(r() * arr.length)];
+const pick = <T>(arr: T[], r: () => number) => arr[Math.floor(r() * arr.length)];
 
 // Center: Ghaziabad / NCR area
 const CENTER = { lat: 28.6692, lng: 77.4538 };
@@ -75,7 +105,8 @@ export function generateEmergencies(n = 12): Emergency[] {
   const r = seedRand(42);
   return Array.from({ length: n }, (_, i) => {
     const sev = pick(SEVERITIES, r);
-    const status: Emergency["status"] = i < 3 ? "active" : i < 6 ? "dispatched" : i < 9 ? "en-route" : "at-hospital";
+    const status: Emergency["status"] =
+      i < 3 ? "active" : i < 6 ? "dispatched" : i < 9 ? "en-route" : "at-hospital";
     return {
       id: `EMG-${1000 + i}`,
       type: pick(TYPES, r),
@@ -107,22 +138,18 @@ export function generateAmbulances(n = 16): Ambulance[] {
   }));
 }
 
-export function generateHospitals(n = 8): Hospital[] {
-  const r = seedRand(99);
-  const NAMES = ["Apollo", "Fortis", "Max", "Yashoda", "Columbia Asia", "Sarvodaya", "Atlanta", "Vasundhara Medical"];
-  return Array.from({ length: n }, (_, i) => ({
-    id: `HSP-${10 + i}`,
-    name: `${NAMES[i % NAMES.length]} Hospital`,
-    lat: CENTER.lat + (r() - 0.5) * 0.1,
-    lng: CENTER.lng + (r() - 0.5) * 0.1,
-    beds: 80 + Math.floor(r() * 200),
-    icuFree: Math.floor(r() * 12),
-    emergencyFree: Math.floor(r() * 18) + 2,
-    distanceKm: +(r() * 12 + 1).toFixed(1),
-    rating: +(3.5 + r() * 1.5).toFixed(1),
-    specialties: ["Trauma", "Cardiac", "Neuro", "Pediatric"].slice(0, 2 + Math.floor(r() * 2)),
-  }));
-}
+export const ALL_AMBULANCES = generateAmbulances();
+
+export const ALL_HOSPITALS: Hospital[] = [
+  { id: "HSP-10", name: "Yashoda Hospital", lat: 28.6692, lng: 77.4538, beds: 120, icuFree: 8, emergencyFree: 15, distanceKm: 2.1, rating: 4.8, specialties: ["Trauma", "Cardiac"] },
+  { id: "HSP-11", name: "Fortis Hospital", lat: 28.6186, lng: 77.3725, beds: 150, icuFree: 12, emergencyFree: 18, distanceKm: 6.4, rating: 4.6, specialties: ["Neuro", "Emergency"] },
+  { id: "HSP-12", name: "Max Hospital", lat: 28.6358, lng: 77.3235, beds: 200, icuFree: 5, emergencyFree: 10, distanceKm: 8.2, rating: 4.9, specialties: ["Trauma", "Pediatric"] },
+  { id: "HSP-13", name: "Columbia Asia", lat: 28.6322, lng: 77.4578, beds: 90, icuFree: 3, emergencyFree: 8, distanceKm: 4.5, rating: 4.2, specialties: ["General", "Cardiac"] },
+  { id: "HSP-14", name: "Sarvodaya Hospital", lat: 28.6735, lng: 77.4326, beds: 110, icuFree: 9, emergencyFree: 14, distanceKm: 1.5, rating: 4.5, specialties: ["Trauma", "Burns"] },
+  { id: "HSP-15", name: "Atlanta Hospital", lat: 28.6411, lng: 77.3755, beds: 80, icuFree: 2, emergencyFree: 5, distanceKm: 5.8, rating: 3.9, specialties: ["Orthopedic"] },
+  { id: "HSP-16", name: "Vasundhara Medical", lat: 28.6622, lng: 77.3698, beds: 60, icuFree: 4, emergencyFree: 6, distanceKm: 5.1, rating: 4.1, specialties: ["General"] },
+  { id: "HSP-17", name: "Apollo Clinic", lat: 28.6501, lng: 77.4201, beds: 40, icuFree: 1, emergencyFree: 3, distanceKm: 3.2, rating: 4.3, specialties: ["Emergency"] }
+];
 
 export function generateVolunteers(n = 6): Volunteer[] {
   const r = seedRand(33);
@@ -139,10 +166,19 @@ export function generateVolunteers(n = 6): Volunteer[] {
 }
 
 export const responseTimeData = Array.from({ length: 12 }, (_, i) => ({
-  month: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][i],
+  month: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][i],
   before: 18 - Math.random() * 2,
   after: 7 - Math.random() * 1.5,
 }));
+
+export const ALL_POLICE_UNITS: PoliceUnit[] = [
+  { id: "GZB-POL-001", unitType: "MOTORCYCLE_UNIT", lat: 28.777426, lng: 77.335354, status: "available" },
+  { id: "GZB-POL-002", unitType: "RAPID_RESPONSE", lat: 28.60307, lng: 77.549433, status: "patrolling" },
+  { id: "GZB-POL-003", unitType: "RAPID_RESPONSE", lat: 28.632535, lng: 77.308515, status: "patrolling" },
+  { id: "GZB-POL-007", unitType: "MOTORCYCLE_UNIT", lat: 28.651219, lng: 77.388379, status: "patrolling" },
+  { id: "GZB-POL-008", unitType: "RAPID_RESPONSE", lat: 28.634831, lng: 77.453049, status: "patrolling" },
+  { id: "GZB-POL-009", unitType: "TRAFFIC_UNIT", lat: 28.809239, lng: 77.385986, status: "patrolling" }
+];
 
 export const emergencyTypeData = [
   { name: "Accident", value: 412, color: "oklch(0.65 0.25 25)" },
@@ -159,7 +195,7 @@ export const utilizationData = Array.from({ length: 24 }, (_, h) => ({
 }));
 
 export const livesSavedData = Array.from({ length: 7 }, (_, i) => ({
-  day: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][i],
+  day: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i],
   lives: Math.round(40 + Math.random() * 30),
   incidents: Math.round(80 + Math.random() * 50),
 }));
@@ -183,3 +219,340 @@ export const platformStats = {
   citiesActive: 12,
   uptime: 99.98,
 };
+
+// ===== AEGIS COMMAND CENTER EXTENSIONS =====
+
+export interface AegisAgent {
+  id: string;
+  name: string;
+  status: "idle" | "processing" | "done" | "error";
+  currentTask: string;
+}
+
+export interface CCTVDetection {
+  type: "accident" | "vehicle" | "person" | "fire" | "smoke" | "crowd";
+  confidence: number;
+  timestamp: string;
+}
+
+export interface CCTVCamera {
+  id: string;
+  location: string;
+  zone: string;
+  status: "live" | "offline";
+  detections: CCTVDetection[];
+}
+
+export const cctvCameras: CCTVCamera[] = [
+  {
+    id: "CAM-001",
+    location: "NH-24 Bridge Overpass",
+    zone: "Sector 62",
+    status: "live",
+    detections: [
+      { type: "accident", confidence: 94, timestamp: "16:22:04" },
+      { type: "vehicle", confidence: 99, timestamp: "16:22:04" },
+      { type: "person", confidence: 87, timestamp: "16:22:05" },
+    ],
+  },
+  {
+    id: "CAM-002",
+    location: "Raj Nagar Flyover",
+    zone: "Raj Nagar",
+    status: "live",
+    detections: [
+      { type: "crowd", confidence: 78, timestamp: "16:21:30" },
+      { type: "vehicle", confidence: 95, timestamp: "16:21:31" },
+    ],
+  },
+  {
+    id: "CAM-003",
+    location: "Indirapuram Junction",
+    zone: "Indirapuram",
+    status: "offline",
+    detections: [],
+  },
+  {
+    id: "CAM-004",
+    location: "Vasundhara Sector 4",
+    zone: "Vasundhara",
+    status: "live",
+    detections: [
+      { type: "smoke", confidence: 72, timestamp: "16:20:15" },
+      { type: "fire", confidence: 68, timestamp: "16:20:16" },
+    ],
+  },
+  {
+    id: "CAM-005",
+    location: "GT Road Junction",
+    zone: "Govindpuram",
+    status: "live",
+    detections: [{ type: "vehicle", confidence: 91, timestamp: "16:19:44" }],
+  },
+];
+
+export function getAgentStates(incidentStatus: Emergency["status"]): AegisAgent[] {
+  const stageOrder: Emergency["status"][] = [
+    "active",
+    "dispatched",
+    "en-route",
+    "at-hospital",
+    "resolved",
+  ];
+  const stageIdx = stageOrder.indexOf(incidentStatus);
+
+  const isDone = (requiredStage: number) => stageIdx >= requiredStage;
+  const isProcessing = (requiredStage: number) => stageIdx === requiredStage - 1;
+
+  return [
+    {
+      id: "incident-agent",
+      name: "Incident Agent",
+      status: isDone(1) ? "done" : isProcessing(1) ? "processing" : "idle",
+      currentTask: isDone(1)
+        ? "Severity classified · Victims estimated: 4–6"
+        : isProcessing(1)
+          ? "Classifying incident severity..."
+          : "Awaiting incident trigger",
+    },
+    {
+      id: "vision-agent",
+      name: "Vision Agent",
+      status: isDone(1) ? "done" : isProcessing(1) ? "processing" : "idle",
+      currentTask: isDone(1)
+        ? "CCTV analyzed · Accident + 4 persons detected (94%)"
+        : isProcessing(1)
+          ? "Processing CCTV feed CAM-001..."
+          : "Monitoring camera network",
+    },
+    {
+      id: "ambulance-agent",
+      name: "Ambulance Agent",
+      status: isDone(2) ? "done" : isProcessing(2) ? "processing" : "idle",
+      currentTask: isDone(2)
+        ? "AMB-100 selected · 96% match · ETA 4 min"
+        : isProcessing(2)
+          ? "Selecting optimal ambulance..."
+          : "Awaiting incident classification",
+    },
+    {
+      id: "hospital-agent",
+      name: "Hospital Agent",
+      status: isDone(2) ? "done" : isProcessing(2) ? "processing" : "idle",
+      currentTask: isDone(2)
+        ? "Apollo Hospital matched · ICU: 8 free · 3.2 km"
+        : isProcessing(2)
+          ? "Matching hospital capacity..."
+          : "Awaiting incident classification",
+    },
+    {
+      id: "traffic-agent",
+      name: "Traffic Agent",
+      status: isDone(3) ? "done" : isProcessing(3) ? "processing" : "idle",
+      currentTask: isDone(3)
+        ? "Green corridor active · 6 signals overridden"
+        : isProcessing(3)
+          ? "Creating emergency corridor..."
+          : "Awaiting dispatch confirmation",
+    },
+    {
+      id: "volunteer-agent",
+      name: "Volunteer Agent",
+      status: isDone(2) ? "done" : isProcessing(2) ? "processing" : "idle",
+      currentTask: isDone(2)
+        ? "2 volunteers notified · Nearest ETA 3 min"
+        : isProcessing(2)
+          ? "Locating certified nearby responders..."
+          : "Awaiting incident classification",
+    },
+    {
+      id: "command-agent",
+      name: "Command Agent",
+      status: isDone(3) ? "done" : isProcessing(3) ? "processing" : "idle",
+      currentTask: isDone(3)
+        ? "Response plan ready · Awaiting operator approval"
+        : isProcessing(3)
+          ? "Generating unified response plan..."
+          : "Coordinating all agents",
+    },
+  ];
+}
+
+// ===== TRAFFIC POLICE / TRAFFIC CONTROL EXTENSIONS =====
+
+export interface TrafficCorridor {
+  id: string;
+  ambulanceId: string;
+  incidentId: string;
+  routeName: string;
+  signalsOverridden: number;
+  status: "active" | "cleared" | "pending";
+  startTime: string;
+  etaSavedMin: number;
+  origin: string;
+  destination: string;
+}
+
+export interface TrafficSignal {
+  id: string;
+  intersection: string;
+  zone: string;
+  status: "green-override" | "normal-auto" | "manual-hold" | "congested";
+  overrideBy?: string;
+  timeRemainingSec: number;
+}
+
+export interface TrafficCongestionZone {
+  id: string;
+  zoneName: string;
+  congestionLevel: "critical" | "heavy" | "moderate" | "clear";
+  avgSpeedKmH: number;
+  activeIncidents: number;
+}
+
+export interface RoadBlockage {
+  id: string;
+  location: string;
+  zone: string;
+  cause: string;
+  severity: "high" | "medium" | "low";
+  reportedAt: string;
+  clearingETA: string;
+  reroutePlan: string;
+}
+
+export const initialTrafficCorridors: TrafficCorridor[] = [
+  {
+    id: "COR-101",
+    ambulanceId: "AMB-1083",
+    incidentId: "EMG-1258",
+    routeName: "Sector 62 Crossing → NH-24 → City Care Trauma Hub",
+    signalsOverridden: 6,
+    status: "active",
+    startTime: "16:22:10",
+    etaSavedMin: 6.5,
+    origin: "Sector 62 Crossing",
+    destination: "City Care Trauma Hub",
+  },
+  {
+    id: "COR-102",
+    ambulanceId: "AMB-1094",
+    incidentId: "EMG-1262",
+    routeName: "Raj Nagar Flyover → GT Road → Fortis Hospital",
+    signalsOverridden: 4,
+    status: "pending",
+    startTime: "16:20:00",
+    etaSavedMin: 4.2,
+    origin: "Raj Nagar Flyover",
+    destination: "Fortis Hospital",
+  },
+];
+
+export const initialTrafficSignals: TrafficSignal[] = [
+  {
+    id: "SIG-621",
+    intersection: "Sector 62 Main Junction",
+    zone: "Sector 62",
+    status: "green-override",
+    overrideBy: "AMB-1083 Green Corridor",
+    timeRemainingSec: 140,
+  },
+  {
+    id: "SIG-622",
+    intersection: "NH-24 Bypass Slip Road",
+    zone: "Sector 62",
+    status: "green-override",
+    overrideBy: "AMB-1083 Green Corridor",
+    timeRemainingSec: 180,
+  },
+  {
+    id: "SIG-301",
+    intersection: "Raj Nagar Flyover Entry",
+    zone: "Raj Nagar",
+    status: "normal-auto",
+    timeRemainingSec: 45,
+  },
+  {
+    id: "SIG-404",
+    intersection: "Indirapuram Metro Gate 2",
+    zone: "Indirapuram",
+    status: "congested",
+    timeRemainingSec: 25,
+  },
+  {
+    id: "SIG-508",
+    intersection: "GT Road Central Junction",
+    zone: "Govindpuram",
+    status: "normal-auto",
+    timeRemainingSec: 60,
+  },
+  {
+    id: "SIG-712",
+    intersection: "Vasundhara Sector 4 Crossing",
+    zone: "Vasundhara",
+    status: "green-override",
+    overrideBy: "AMB-1094 Emergency",
+    timeRemainingSec: 95,
+  },
+];
+
+export const initialCongestionZones: TrafficCongestionZone[] = [
+  {
+    id: "Z-01",
+    zoneName: "NH-24 Bridge Flyover",
+    congestionLevel: "critical",
+    avgSpeedKmH: 14,
+    activeIncidents: 2,
+  },
+  {
+    id: "Z-02",
+    zoneName: "Raj Nagar Central Junction",
+    congestionLevel: "heavy",
+    avgSpeedKmH: 22,
+    activeIncidents: 1,
+  },
+  {
+    id: "Z-03",
+    zoneName: "Sector 62 Metro Corridor",
+    congestionLevel: "clear",
+    avgSpeedKmH: 52,
+    activeIncidents: 1,
+  },
+  {
+    id: "Z-04",
+    zoneName: "GT Road Industrial Crossing",
+    congestionLevel: "moderate",
+    avgSpeedKmH: 34,
+    activeIncidents: 0,
+  },
+  {
+    id: "Z-05",
+    zoneName: "Vasundhara Link Road",
+    congestionLevel: "clear",
+    avgSpeedKmH: 48,
+    activeIncidents: 0,
+  },
+];
+
+export const initialRoadBlockages: RoadBlockage[] = [
+  {
+    id: "BLK-01",
+    location: "NH-24 Underpass Flyover",
+    zone: "Sector 62",
+    cause: "Two-vehicle collision blocking Lane 1 & 2",
+    severity: "high",
+    reportedAt: "16:18",
+    clearingETA: "15 mins",
+    reroutePlan: "Divert light vehicles to Sector 62 Link Road; Keep emergency lane open",
+  },
+  {
+    id: "BLK-02",
+    location: "Raj Nagar Flyover Exit",
+    zone: "Raj Nagar",
+    cause: "Stalled freight truck on right shoulder",
+    severity: "medium",
+    reportedAt: "16:05",
+    clearingETA: "10 mins",
+    reroutePlan: "Use Service Road 3 for northbound traffic",
+  },
+];

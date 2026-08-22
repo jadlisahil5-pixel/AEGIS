@@ -105,6 +105,7 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: `if (typeof global === 'undefined') { window.global = window; }` }} />
         <HeadContent />
       </head>
       <body>
