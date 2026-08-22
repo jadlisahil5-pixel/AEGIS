@@ -80,3 +80,8 @@ export function clearSession() {
     // ignore
   }
 }
+
+export function getDisplayName(role: string): string {
+  const p = getProfile(role);
+  return p.name || p.displayName || p.firstName || "User";
+}
