@@ -37,7 +37,7 @@ export function GoogleLiveMap({
 }: GoogleLiveMapProps) {
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
-    googleMapsApiKey: "AIzaSyCo5LX__u7xIs3xvVfctlKXA7fkbaEFKv8",
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyCo5LX__u7xIs3xvVfctlKXA7fkbaEFKv8",
   });
 
   const [directionsPath, setDirectionsPath] = useState<{ lat: number, lng: number }[]>([]);
@@ -185,36 +185,42 @@ export function GoogleLiveMap({
   });
 
   return (
-    <div className={cn("relative w-full overflow-hidden rounded-2xl shadow-sm border", dark ? "border-[#242E42]" : "border-gray-200/80", className)} style={{ minHeight: 360 }}>
-      <GoogleMap
-        mapContainerStyle={containerStyle}
-        center={center}
-        zoom={12}
-        options={mapOptions}
-      >
-        {dynamicMarkers.map((marker) => (
-          <Marker
-            key={marker.id}
-            position={{ lat: marker.lat, lng: marker.lng }}
-            label={{
-              text: getMarkerIcon(marker.type),
-              fontSize: "20px",
-            }}
-            title={marker.title || marker.label}
-          />
-        ))}
+    <div className={cn("relative w-full overflow-hidden rounded-2xl shadow-sm border flex items-center justify-center", dark ? "border-[#242E42] bg-gray-900" : "border-gray-200/80 bg-gray-100", className)} style={{ minHeight: 360 }}>
+      {!isLoaded ? (
+        <div className="text-gray-500 text-sm font-semibold flex items-center gap-2">
+          <span className="animate-spin h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full" /> Loading Google Maps...
+        </div>
+      ) : (
+        <GoogleMap
+          mapContainerStyle={containerStyle}
+          center={center}
+          zoom={12}
+          options={mapOptions}
+        >
+          {dynamicMarkers.map((marker) => (
+            <Marker
+              key={marker.id}
+              position={{ lat: marker.lat, lng: marker.lng }}
+              label={{
+                text: getMarkerIcon(marker.type),
+                fontSize: "20px",
+              }}
+              title={marker.title || marker.label}
+            />
+          ))}
 
-        {showCorridor && directionsPath.length > 0 && (
-          <Polyline
-            path={directionsPath}
-            options={{
-              strokeColor: dark ? "#00E5FF" : "#2563EB",
-              strokeOpacity: 0.8,
-              strokeWeight: 5,
-            }}
-          />
-        )}
-      </GoogleMap>
+          {showCorridor && directionsPath.length > 0 && (
+            <Polyline
+              path={directionsPath}
+              options={{
+                strokeColor: dark ? "#00E5FF" : "#2563EB",
+                strokeOpacity: 0.8,
+                strokeWeight: 5,
+              }}
+            />
+          )}
+        </GoogleMap>
+      )}
     </div>
   );
 }
